@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "rl-snake"
+version = "0.1.0"
+description = "Reinforcement Learning agent that learns to play Snake"
+authors = ["Manav Mehta <your@email.com>"]
+readme = "README.md"
+packages = [{ include = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+torch = "^2.3.0"
+numpy = "^1.26.0"
+pygame = "^2.5.0"
+matplotlib = "^3.9.0"
+gymnasium = "^0.29.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
