@@ -1,3 +1,4 @@
+""" Creating a branch to allow users to play """
 import pygame
 import random
 from enum import Enum
