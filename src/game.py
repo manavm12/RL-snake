@@ -2,6 +2,7 @@ import pygame
 import random
 from enum import Enum
 from collections import namedtuple
+import numpy as np
 
 pygame.init()
 
@@ -107,6 +108,16 @@ class SnakeGame:
         if self.head in self.snake[1:]:
             return True
         return False
+    
+    def _is_collision_point(self, pt):
+        # Check wall collision
+        if pt.x > self.w - BLOCK_SIZE or pt.x < 0 or pt.y > self.h - BLOCK_SIZE or pt.y < 0:
+            return True
+        # Check self collision
+        if pt in self.snake[1:]:
+            return True
+        return False
+
 
     def _update_ui(self):
         self.display.fill(BLACK)
@@ -134,13 +145,81 @@ class SnakeGame:
             y += BLOCK_SIZE
 
         self.head = Point(x, y)
+    
+
+    def get_state(self):
+        head = self.snake[0]
+
+        # Points immediately around the head (relative positions)
+        point_l = Point(head.x - BLOCK_SIZE, head.y)
+        point_r = Point(head.x + BLOCK_SIZE, head.y)
+        point_u = Point(head.x, head.y - BLOCK_SIZE)
+        point_d = Point(head.x, head.y + BLOCK_SIZE)
+
+        # Current direction
+        dir_l = self.direction == Direction.LEFT
+        dir_r = self.direction == Direction.RIGHT
+        dir_u = self.direction == Direction.UP
+        dir_d = self.direction == Direction.DOWN
+
+        # Dangers (relative to current direction)
+        danger_straight = (
+            (dir_r and self._is_collision_point(point_r)) or
+            (dir_l and self._is_collision_point(point_l)) or
+            (dir_u and self._is_collision_point(point_u)) or
+            (dir_d and self._is_collision_point(point_d))
+        )
+
+        danger_right = (
+            (dir_u and self._is_collision_point(point_r)) or
+            (dir_d and self._is_collision_point(point_l)) or
+            (dir_l and self._is_collision_point(point_u)) or
+            (dir_r and self._is_collision_point(point_d))
+        )
+
+        danger_left = (
+            (dir_d and self._is_collision_point(point_r)) or
+            (dir_u and self._is_collision_point(point_l)) or
+            (dir_r and self._is_collision_point(point_u)) or
+            (dir_l and self._is_collision_point(point_d))
+        )
+
+        # Direction one-hot (4 values)
+        direction_left = dir_l
+        direction_right = dir_r
+        direction_up = dir_u
+        direction_down = dir_d
+
+        # Food location relative to head (4 values)
+        food_left = self.food.x < head.x
+        food_right = self.food.x > head.x
+        food_up = self.food.y < head.y
+        food_down = self.food.y > head.y
+
+        # Return numpy array (int form)
+        state = np.array([
+            int(danger_straight),
+            int(danger_right),
+            int(danger_left),
+            int(direction_left),
+            int(direction_right),
+            int(direction_up),
+            int(direction_down),
+            int(food_left),
+            int(food_right),
+            int(food_up),
+            int(food_down)
+        ], dtype=int)
+
+        return state
 
 if __name__ == "__main__":
     game = SnakeGame()
 
     while True:
         game_over, score = game.play_step()
-
+        print(game.get_state())  # Debug: print the 11 features
+    
         if game_over:
             break
 
