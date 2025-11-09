@@ -59,46 +59,37 @@ class SnakeGame:
         if self.food in self.snake:
             self._place_food()
 
-    def play_step(self):
-        # 1. Handle user input
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
-
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT and self.direction != Direction.RIGHT:
-                    self.direction = Direction.LEFT
-                elif event.key == pygame.K_RIGHT and self.direction != Direction.LEFT:
-                    self.direction = Direction.RIGHT
-                elif event.key == pygame.K_UP and self.direction != Direction.DOWN:
-                    self.direction = Direction.UP
-                elif event.key == pygame.K_DOWN and self.direction != Direction.UP:
-                    self.direction = Direction.DOWN
-
-        # 2. Move the snake
-        self._move()
+    def play_step(self, action):
+        # 1. Move → update the direction based on agent's action
+        self._move_agent(action)
         self.snake.insert(0, self.head)
 
-        # 3. Check for collisions
+        # 2. Check if game over
+        reward = 0
         game_over = False
         if self._is_collision():
             game_over = True
-            return game_over, self.score
+            reward = -10
+            return reward, game_over, self.score
 
-        # 4. Place new food or move tail
+        # 3. Check if food eaten
         if self.head == self.food:
             self.score += 1
+            reward = 10
             self._place_food()
         else:
-            self.snake.pop()
+            self.snake.pop()  # move tail normally
 
-        # 5. Update UI
+        # 4. Update UI & clock
         self._update_ui()
         self.clock.tick(SPEED)
 
-        # 6. Return game state
-        return game_over, self.score
+        # 5. Small step penalty to encourage efficiency
+        reward += -0.1
+
+        # 6. Return results for RL loop
+        return reward, game_over, self.score
+
 
     def _is_collision(self):
         # Hit boundaries
@@ -146,6 +137,37 @@ class SnakeGame:
 
         self.head = Point(x, y)
     
+    def _move_agent(self, action):
+        """
+        Action: [straight, right turn, left turn]
+        """
+        clock_wise = [Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP]
+        idx = clock_wise.index(self.direction)
+
+        if np.array_equal(action, [1, 0, 0]):
+            new_dir = clock_wise[idx]  # straight
+        elif np.array_equal(action, [0, 1, 0]):
+            next_idx = (idx + 1) % 4
+            new_dir = clock_wise[next_idx]  # right turn
+        else:  # [0, 0, 1]
+            next_idx = (idx - 1) % 4
+            new_dir = clock_wise[next_idx]  # left turn
+
+        self.direction = new_dir
+
+        x = self.head.x
+        y = self.head.y
+        if self.direction == Direction.RIGHT:
+            x += BLOCK_SIZE
+        elif self.direction == Direction.LEFT:
+            x -= BLOCK_SIZE
+        elif self.direction == Direction.UP:
+            y -= BLOCK_SIZE
+        elif self.direction == Direction.DOWN:
+            y += BLOCK_SIZE
+
+        self.head = Point(x, y)
+
 
     def get_state(self):
         head = self.snake[0]
@@ -217,10 +239,13 @@ if __name__ == "__main__":
     game = SnakeGame()
 
     while True:
-        game_over, score = game.play_step()
-        print(game.get_state())  # Debug: print the 11 features
-    
-        if game_over:
-            break
+        action = np.random.choice([0, 1, 2])  # 0=straight, 1=right, 2=left
+        action_vec = [0, 0, 0]
+        action_vec[action] = 1
 
-    print("Final Score:", score)
+        reward, game_over, score = game.play_step(action_vec)
+        print(f"Reward: {reward}, Score: {score}")
+
+        if game_over:
+            print("Game Over! Final Score:", score)
+            break
