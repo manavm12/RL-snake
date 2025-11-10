@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import numpy as np
 
 class LinearQNet(nn.Module):
     def __init__(self, input_size, hidden_size, output_size):
@@ -13,6 +13,10 @@ class LinearQNet(nn.Module):
         x = F.relu(self.linear1(x))
         x = self.linear2(x)
         return x
+    
+    def save(self, file_name='model.pth'):
+        """Save the trained model parameters"""
+        torch.save(self.state_dict(), file_name)
 
 
 class QTrainer:
@@ -24,10 +28,10 @@ class QTrainer:
         self.criterion = nn.MSELoss()
 
     def train_step(self, state, action, reward, next_state, done):
-        state = torch.tensor(state, dtype=torch.float)
-        next_state = torch.tensor(next_state, dtype=torch.float)
-        action = torch.tensor(action, dtype=torch.long)
-        reward = torch.tensor(reward, dtype=torch.float)
+        state = torch.tensor(np.array(state), dtype=torch.float)
+        next_state = torch.tensor(np.array(next_state), dtype=torch.float)
+        action = torch.tensor(np.array(action), dtype=torch.long)
+        reward = torch.tensor(np.array(reward), dtype=torch.float)
 
         if len(state.shape) == 1:
             # reshape for single sample
